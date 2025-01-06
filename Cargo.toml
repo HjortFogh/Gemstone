@@ -1,0 +1,8 @@
+[package]
+name = "gemai"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+behaviors = { version = "0.1.0", path = "behaviors" }
+gemstone = { version = "0.1.0", path = "gemstone" }
