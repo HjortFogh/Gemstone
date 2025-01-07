@@ -1,60 +1,31 @@
-use super::{card_like::CardLike, CardChoice};
+use super::{Card, CardChoice};
 
-pub trait CardIterator: Iterator + Sized {
-    fn non_null(self) -> impl Iterator<Item = Self::Item>
-    where
-        Self: Sized,
-        Self::Item: CardLike,
-    {
-        self.filter(|card| !card.is_null())
-    }
+macro_rules! card_iterator_impl {
+    ($name:ident for $($bounds:tt)+) => {
+        pub trait $name
+        where
+            Self: Iterator + Sized,
+            Self::Item: $($bounds)+,
+        {
+            fn choose_cards(self, choice: CardChoice) -> impl Iterator<Item = Self::Item> {
+                self.enumerate()
+                    .filter(move |(i, _)| choice.check(*i))
+                    .map(|(_, card)| card)
+            }
 
-    fn null(self) -> impl Iterator<Item = Self::Item>
-    where
-        Self: Sized,
-        Self::Item: CardLike,
-    {
-        self.filter(|card| card.is_null())
-    }
+            fn non_null(self) -> impl Iterator<Item = Self::Item> {
+                self.filter(|card| !card.as_ref().is_null())
+            }
+        }
 
-    fn choose_cards(self, choice: CardChoice) -> impl Iterator<Item = Self::Item>
-    where
-        Self: Sized,
-        Self::Item: CardLike,
-    {
-        self.enumerate()
-            .filter(move |(idx, _)| choice.check(*idx))
-            .map(|(_, item)| item)
-    }
-
-    fn leveraged(self) -> impl Iterator<Item = Self::Item>
-    where
-        Self: Sized,
-        Self::Item: CardLike,
-    {
-        self.filter(|card| card.is_leveraged())
-    }
-
-    fn non_leveraged(self) -> impl Iterator<Item = Self::Item>
-    where
-        Self: Sized,
-        Self::Item: CardLike,
-    {
-        self.filter(|card| !card.is_leveraged())
-    }
-
-    fn capital(self) -> i8
-    where
-        Self: Sized,
-        Self::Item: CardLike,
-    {
-        self.filter_map(|card| card.get_value()).sum()
-    }
+        impl<I> $name for I
+        where
+            I: Iterator + Sized,
+            I::Item: $($bounds)+,
+        {
+        }
+    };
 }
 
-impl<I> CardIterator for I
-where
-    I: Iterator,
-    I::Item: CardLike,
-{
-}
+card_iterator_impl!(CardIteratorRef for AsRef<Card>);
+card_iterator_impl!(CardIteratorMut for AsMut<Card> + AsRef<Card>);

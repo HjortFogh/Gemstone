@@ -2,7 +2,7 @@ use rand::{seq::SliceRandom, thread_rng};
 
 use crate::player::PlayerInventory;
 
-use super::{Card, CardChoice, CardIterator, CardLike};
+use super::{Card, CardChoice, CardIteratorRef};
 
 /// Represents the final game scores for each of the possible players.
 #[derive(Default, Debug, Clone, Copy)]
@@ -97,7 +97,8 @@ impl GameInfo {
     }
 
     pub fn stack(&self) -> &[Card] {
-        let i = self.stack.into_iter().non_null().count();
+        // TODO: refractor
+        let i = self.stack.iter().non_null().count();
         &self.stack[..i]
     }
 }

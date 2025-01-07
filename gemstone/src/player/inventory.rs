@@ -1,4 +1,7 @@
-use crate::game::{Card, CardChoice, CardIterator};
+use crate::{
+    game::{Card, CardChoice},
+    CardIteratorMut, CardIteratorRef,
+};
 
 /// TODO: write docs for entire file
 #[derive(Clone, Copy, Default, Debug)]
@@ -25,11 +28,15 @@ impl PlayerInventory {
         self.size += 1;
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = Card> {
-        self.cards.into_iter()
+    pub fn iter(&self) -> impl CardIteratorRef<Item = &Card> {
+        self.cards.iter()
     }
 
-    pub fn choose(&self, choice: CardChoice) -> impl Iterator<Item = Card> {
-        self.cards.into_iter().choose_cards(choice)
+    pub fn iter_mut(&mut self) -> impl CardIteratorMut<Item = &mut Card> {
+        self.cards.iter_mut()
+    }
+
+    pub fn choose(&self, choice: CardChoice) -> impl CardIteratorRef<Item = &Card> {
+        self.cards.iter().choose_cards(choice)
     }
 }
