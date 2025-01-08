@@ -1,10 +1,8 @@
 use rand::thread_rng;
 
-use crate::player::PlayerInventory;
+use crate::{player::PlayerInventory, GemNotation};
 
-use super::{Card, CardChoice, CardCollection, CardIterator, GemType};
-
-// TODO: figure out whether to use u8/usize, i8/i32/custom bid struct
+use super::{Card, CardChoice, CardCollection, CardIterator};
 
 /// Represents the final game scores for each of the possible players.
 #[derive(Default, Debug, Clone, Copy)]
@@ -18,21 +16,23 @@ pub struct GameScores([i32; 4]);
 #[derive(Clone)]
 pub struct GameInfo {
     /// The total number of players in range `[2..5)`.
-    num_players: u8,
+    num_players: usize,
     /// The round index in range `[0..6)` while the game is still ongoing, and
     /// `[6..)` if the game has ended.
-    round_index: u8,
+    round_index: usize,
     /// The current player index in range `[0..num_players)`.
-    current_player: u8,
+    current_player: usize,
     /// The index of the starting player in the current (both auction /
     /// reinvestment) round.
-    starting_player: u8,
+    starting_player: usize,
     /// The index of the highest player.
-    highest_bidder: u8,
+    highest_bidder: usize,
+    /// Indicates whether this round has ended.
+    round_over: bool,
     /// The highest bid made by any player, or `-1` if no bids have been made.
     highest_bid: i8,
-    /// Inventories of all the players.
-    /// TODO: If less than four players all non-used inventories [...]
+    /// Inventories of all the players. If less than four players all non-used
+    /// inventories will be filled with [`Card::NULL`].
     inventories: [PlayerInventory; 4],
     /// The current order of all cards in the deck.
     deck: CardCollection<18>,
@@ -42,42 +42,81 @@ pub struct GameInfo {
     stack: CardCollection<4>,
 }
 
+//
+// Constructors
+//
+
+impl GameInfo {
+    /// Creates a new `GameInfo` given a number of players. This also
+    /// initialises all fields to their respective defaults, such as setting
+    /// the inventories to have coins and creating a shuffled deck of 18 cards.
+    pub fn new(num_players: usize) -> Self {
+        let mut deck = Card::gem_deck();
+        deck.shuffle(&mut thread_rng());
+        Self {
+            num_players,
+            round_index: 0,
+            current_player: 0,
+            starting_player: 0,
+            highest_bidder: num_players - 1,
+            round_over: false,
+            highest_bid: -1,
+            inventories: Default::default(),
+            deck,
+            stack: Default::default(),
+        }
+    }
+
+    pub fn from_notation(_notation: GemNotation) -> Self {
+        todo!()
+    }
+}
+
+//
+// Basic getters/setters
+//
+
 impl GameInfo {
     /// Returns the number of players in range `[2..5)`.
     #[inline]
-    pub fn num_players(&self) -> u8 {
+    pub fn num_players(&self) -> usize {
         self.num_players
     }
 
     #[inline]
-    pub fn round_index(&self) -> u8 {
+    pub fn round_index(&self) -> usize {
         self.round_index
+    }
+
+    #[inline]
+    pub fn increment_round_index(&mut self) {
+        self.round_index += 1;
     }
 
     /// Returns the current player.
     #[inline]
-    pub fn current_player(&self) -> u8 {
+    pub fn current_player(&self) -> usize {
         self.current_player
     }
 
     #[inline]
-    pub fn set_current_player(&mut self, idx: u8) {
+    pub fn set_current_player(&mut self, idx: usize) {
         self.current_player = idx;
     }
 
     #[inline]
-    pub fn starting_player(&self) -> u8 {
+    pub fn starting_player(&self) -> usize {
         self.starting_player
     }
 
     #[inline]
-    pub fn set_starting_player(&mut self, idx: u8) {
-        self.starting_player = idx;
+    pub fn highest_bidder(&self) -> usize {
+        self.highest_bidder
     }
 
     #[inline]
-    pub fn highest_bidder(&self) -> u8 {
-        self.highest_bidder
+    pub fn round_over(&self) -> bool {
+        self.round_over
     }
 
     /// Returns the highest current bid.
@@ -88,7 +127,7 @@ impl GameInfo {
 
     /// TODO: docs
     #[inline]
-    pub fn set_highest_bid(&mut self, bid: i8, idx: u8) {
+    pub fn set_highest_bid(&mut self, bid: i8, idx: usize) {
         self.highest_bidder = idx;
         self.highest_bid = bid;
     }
@@ -96,7 +135,12 @@ impl GameInfo {
     /// Returns the inventories of all players.
     #[inline]
     pub fn inventories(&self) -> &[PlayerInventory] {
-        &self.inventories[..self.num_players as usize]
+        &self.inventories[..self.num_players]
+    }
+
+    #[inline]
+    pub fn inventory_at(&self, idx: usize) -> &PlayerInventory {
+        &self.inventories[idx]
     }
 
     pub fn stack(&self) -> &CardCollection<4> {
@@ -104,40 +148,35 @@ impl GameInfo {
     }
 }
 
+//
+// Round/phase managing
+//
+
 impl GameInfo {
-    /// Creates a new `GameInfo` given a number of players. This also
-    /// initialises all fields to default.
-    pub fn new(num_players: u8) -> Self {
-        let mut deck = Card::gem_deck();
-        deck.shuffle(&mut thread_rng());
-        Self {
-            num_players,
-            round_index: 0,
-            current_player: 0,
-            starting_player: 0,
-            highest_bidder: num_players - 1,
-            highest_bid: -1,
-            inventories: Default::default(),
-            deck,
-            stack: Default::default(),
-        }
+    pub fn start_step_cycle(&mut self, player_idx: usize) {
+        self.round_over = false;
+        self.starting_player = player_idx;
+        self.current_player = player_idx;
+        self.highest_bid = -1;
     }
 
     #[inline]
-    pub fn next_clockwise_player(&self, idx: u8) -> u8 {
+    pub fn next_clockwise_player(&self, idx: usize) -> usize {
         (idx + 1) % self.num_players
     }
 
     /// Sets the active player index to the next clockwise player.
-    #[inline]
-    pub fn next_player(&mut self) {
+    pub fn increment_player(&mut self) {
         self.current_player = self.next_clockwise_player(self.current_player);
+        if self.current_player == self.starting_player {
+            self.round_over = true;
+        }
     }
 
     /// Returns whether the game is currently in the auction phase.
     #[inline]
     pub fn is_auction_phase(&self) -> bool {
-        self.stack.iter().any(|card| !card.is_null())
+        !self.stack.is_empty()
     }
 
     /// Returns whether the game is currently in the reinvestment phase.
@@ -148,15 +187,8 @@ impl GameInfo {
 
     /// Returns whether the game has ended.
     #[inline]
-    pub fn is_game_over(&self) -> bool {
+    pub fn game_over(&self) -> bool {
         self.round_index > 5
-    }
-
-    /// Returns whether the round has just ended. This is the equivalent of
-    /// checking `current_player == starting_player`.
-    #[inline]
-    pub fn is_end_of_round(&self) -> bool {
-        self.current_player == self.starting_player
     }
 
     pub fn prepare_auction(&mut self) {
@@ -164,24 +196,19 @@ impl GameInfo {
             3 => [3, 3, 3, 3, 3, 3],
             _ => [4, 3, 3, 3, 3, 2],
         };
-        let round_index = self.round_index as usize;
-        let i: usize = stack_sizes[..round_index].iter().sum();
-        let s = stack_sizes[round_index];
-        self.stack.copy_from(&self.deck, i..i + s, 0..s);
-        self.prepare_new_round();
-    }
-
-    pub fn prepare_new_round(&mut self) {
-        self.starting_player = self.next_clockwise_player(self.highest_bidder);
-        self.current_player = self.starting_player;
-        self.highest_bid = -1;
+        let round_index = self.round_index;
+        let idx = stack_sizes[..round_index].iter().sum::<usize>();
+        let size = stack_sizes[round_index];
+        self.stack.copy_from(&self.deck, idx..idx + size, 0..size);
     }
 
     pub fn prepare_reinvestment(&mut self) {
         self.starting_player = self.highest_bidder;
         self.current_player = self.starting_player;
     }
+}
 
+impl GameInfo {
     /// Calculates the current game scores.
     pub fn scores(&self) -> GameScores {
         let mut scores = [0; 4];
@@ -205,14 +232,14 @@ impl GameInfo {
 
     #[inline]
     pub fn current_inventory(&self) -> &PlayerInventory {
-        &self.inventories[self.current_player as usize]
+        &self.inventories[self.current_player]
     }
 
-    pub fn buy_card(&mut self, selected_card: u8, current_player: u8, payment_choices: CardChoice) {
-        let card = self.stack.pop(selected_card as usize);
-        self.inventories[current_player as usize].push_back(card);
-        self.inventories[current_player as usize]
-            .choose_mut(payment_choices)
+    pub fn buy_card(&mut self, card_idx: usize, player_idx: usize, payment_choice: CardChoice) {
+        let card = self.stack.pop(card_idx);
+        self.inventories[player_idx].push_back(card);
+        self.inventories[player_idx]
+            .choose_mut(payment_choice)
             .for_each(|card| *card = card.with_leverage(true));
     }
 
@@ -230,7 +257,8 @@ impl GameInfo {
         });
     }
 
-    pub fn next_round(&mut self) {
-        self.round_index += 1;
+    #[inline]
+    pub fn stack_size(&self) -> usize {
+        self.stack.len()
     }
 }

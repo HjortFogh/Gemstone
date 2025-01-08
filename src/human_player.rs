@@ -48,18 +48,18 @@ macro_rules! input {
 #[derive(Debug, Default)]
 pub struct HumanBehavior;
 
-impl PlayerBehavior for HumanBehavior {
+/* impl PlayerBehavior for HumanBehavior {
     fn bid(&mut self, info: &GameInfo) -> i8 {
         println!("\n\n");
         println!("{}", GemNotation::from_info(info));
         input!("make a bid: " => i8, 0)
     }
 
-    fn pick_card(&mut self, info: &GameInfo) -> (u8, CardChoice) {
+    fn pick_card(&mut self, info: &GameInfo) -> (usize, CardChoice) {
         println!("\n\n");
         println!("pick card");
         println!("stack: {:?}", info.stack());
-        let card = input!("select card to buy: " => u8, 0);
+        let card = input!("select card to buy: " => usize, 0);
         println!("inventory: {:?}", info.current_inventory());
         let choice_indices = input!("select payment cards: " => [usize], []);
         (card, CardChoice::new(&choice_indices))
@@ -69,7 +69,23 @@ impl PlayerBehavior for HumanBehavior {
         println!("\n\n");
         println!("inventory: {:?}", info.current_inventory());
         let choice_indices = input!("select cards to flip: " => [usize], []);
-        println!("choice indices: {choice_indices:?}");
-        dbg!(CardChoice::new(&choice_indices))
+        CardChoice::new(&choice_indices)
+    }
+} */
+
+impl PlayerBehavior for HumanBehavior {
+    fn bid(&mut self, _info: &GameInfo) -> i8 {
+        println!("bid");
+        0
+    }
+
+    fn pick_card(&mut self, _info: &GameInfo) -> (usize, CardChoice) {
+        println!("pick_card");
+        (0, CardChoice::NONE)
+    }
+
+    fn reinvest(&mut self, _info: &GameInfo) -> CardChoice {
+        println!("reinvest");
+        CardChoice::NONE
     }
 }

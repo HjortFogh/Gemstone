@@ -34,6 +34,11 @@ impl<const N: usize> CardCollection<N> {
         }
     }
 
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
     fn find_last(cards: &[Card]) -> usize {
         let mut start = 0;
         let mut end = cards.len();
@@ -102,5 +107,10 @@ impl<const N: usize> CardCollection<N> {
 
     pub fn shuffle(&mut self, rng: &mut impl Rng) {
         self.cards[..self.len].shuffle(rng);
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }

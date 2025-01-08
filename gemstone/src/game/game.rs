@@ -15,7 +15,7 @@ impl Game {
     /// There must exist at least two and at most four behaviors.
     pub fn new(behaviors: Vec<Box<dyn PlayerBehavior>>) -> Self {
         assert!(behaviors.len() >= 2 && behaviors.len() <= 4);
-        let mut game_info = GameInfo::new(behaviors.len() as u8);
+        let mut game_info = GameInfo::new(behaviors.len());
         game_info.prepare_auction();
         Self {
             info: game_info,
@@ -39,7 +39,7 @@ impl Game {
     /// encountered this will return `Some(GameScores)`, otherwise `None` for a
     /// game still in progress.
     pub fn step(&mut self) -> Result<Option<GameScores>> {
-        if self.info.is_game_over() {
+        if self.info.game_over() {
             return Ok(Some(self.info.scores()));
         }
         match self.info.is_auction_phase() {
@@ -49,76 +49,68 @@ impl Game {
         Ok(None)
     }
 
-    // TODO: implement, docs
+    // TODO: docs
     fn step_auction(&mut self) -> Result<()> {
-        // query the current player for their bid and clamp negative bids to 0
-        let current_player = self.info.current_player();
-        let bid = self.behaviors.borrow_mut()[current_player as usize]
-            .bid(self.info_ref())
-            .max(0);
-        if self.info.current_inventory().iter().capital() < bid {
-            return Err(GemError::CannotAffordBid);
-        }
+        if !self.info.round_over() {
+            let idx = self.info.current_player();
+            let bid = self.behaviors.borrow_mut()[idx].bid(self.info_ref()).max(0);
 
-        if bid > self.info.highest_bid() {
-            self.info.set_highest_bid(bid, current_player);
-        }
-
-        self.info.next_player();
-
-        // check if this is the end of a round
-        // any auction phase will have an average of three rounds
-        if self.info.is_end_of_round() {
-            self.info.set_current_player(self.info.highest_bidder());
-            let current_player = self.info.current_player();
-            let current_inv = self.info.current_inventory();
-
-            let (selected_card, payment_choices) =
-                self.behaviors.borrow_mut()[current_player as usize].pick_card(self.info_ref());
-
-            if current_inv.choose(payment_choices).leveraged().count() != 0 {
-                return Err(GemError::TriedToUseLeveragedCard);
+            if self.info.inventory_at(idx).iter().capital() < bid {
+                return Err(GemError::CannotAffordBid);
+            }
+            if bid > self.info.highest_bid() {
+                self.info.set_highest_bid(bid, idx);
             }
 
-            println!("player {} won the bidding round with a bid of {}.\nthe capital of this player is {}", current_player, self.info.highest_bid(), current_inv.iter().capital());
+            self.info.increment_player();
+        } else {
+            let idx = self.info.highest_bidder();
+            let inv = self.info.inventory_at(idx);
+            let (mut card_idx, payment_choice) =
+                self.behaviors.borrow_mut()[idx].pick_card(self.info_ref());
+            card_idx = card_idx.min(self.info.stack_size());
 
-            if current_inv.choose(payment_choices).capital() < self.info.highest_bid() {
+            if inv.choose(payment_choice).leveraged().count() != 0 {
+                return Err(GemError::TriedToUseLeveragedCard);
+            }
+            if inv.choose(payment_choice).scalar_value() < self.info.highest_bid() {
                 return Err(GemError::CannotAffordBid);
             }
 
+            self.info.buy_card(card_idx, idx, payment_choice);
             self.info
-                .buy_card(selected_card, current_player, payment_choices);
-            self.info.prepare_new_round();
+                .start_step_cycle(self.info.next_clockwise_player(self.info.highest_bidder()));
         }
 
-        // check if this is the end of the auction phase
         if self.info.is_reinvestment_phase() {
-            // set the starting reinvester to the last buyer
-            self.info.prepare_reinvestment();
+            self.info.start_step_cycle(self.info.highest_bidder());
         }
 
         Ok(())
     }
 
-    // TODO: implement
+    // TODO: docs
     fn step_reinvestment(&mut self) -> Result<()> {
-        let current_player = self.info.current_player() as usize;
+        let idx = self.info.current_player() as usize;
+        let choices = self.behaviors.borrow_mut()[idx].reinvest(self.info_ref());
+
         let current_inv = self.info.current_inventory();
-
-        let choices = self.behaviors.borrow_mut()[current_player].reinvest(self.info_ref());
-
         if current_inv.choose(choices).scalar_value() < 0 {
             return Err(GemError::CannotAffortToFlip);
         }
-        self.info.flip_cards(current_player, choices);
+        self.info.flip_cards(idx, choices);
 
-        self.info.next_player();
+        self.info.increment_player();
 
         // reinvestment phase only has one round
-        if self.info.is_end_of_round() {
+        if self.info.round_over() {
             self.info.reset_coin_cards();
-            self.info.next_round();
-            if !self.info.is_game_over() {
+
+            self.info.increment_round_index();
+            self.info
+                .start_step_cycle(self.info.next_clockwise_player(self.info.highest_bidder()));
+
+            if !self.info.game_over() {
                 self.info.prepare_auction();
             }
         }
