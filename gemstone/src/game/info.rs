@@ -1,11 +1,12 @@
-use rand::{seq::SliceRandom, thread_rng};
+use rand::thread_rng;
 
 use crate::player::PlayerInventory;
 
-use super::{Card, CardChoice, CardIterator};
+use super::{Card, CardChoice, CardCollection};
 
 /// Represents the final game scores for each of the possible players.
 #[derive(Default, Debug, Clone, Copy)]
+#[allow(unused)]
 pub struct GameScores([i32; 4]);
 
 /// The `GameInfo` holds all variables necessary to represent a unqiue
@@ -32,11 +33,11 @@ pub struct GameInfo {
     /// TODO: If less than four players all non-used inventories [...]
     inventories: [PlayerInventory; 4],
     /// The current order of all cards in the deck.
-    deck: [Card; 18],
+    deck: CardCollection<18>,
     /// The current stack of cards. The game is in the reinvstment phase if all
     /// cards in the stack are considered [`null`](`Card::NULL`), otherwise the
     /// game is in the auction phase.
-    stack: [Card; 4],
+    stack: CardCollection<4>,
 }
 
 impl GameInfo {
@@ -96,10 +97,8 @@ impl GameInfo {
         &self.inventories[..self.num_players as usize]
     }
 
-    pub fn stack(&self) -> &[Card] {
-        // TODO: refractor
-        let i = self.stack.iter().non_null().count();
-        &self.stack[..i]
+    pub fn stack(&self) -> &CardCollection<4> {
+        &self.stack
     }
 }
 
@@ -116,7 +115,7 @@ impl GameInfo {
             starting_player: 0,
             highest_bidder: num_players - 1,
             highest_bid: -1,
-            inventories: [PlayerInventory::with_coins(); 4],
+            inventories: Default::default(),
             deck,
             stack: Default::default(),
         }
@@ -164,9 +163,10 @@ impl GameInfo {
             _ => [4, 3, 3, 3, 3, 2],
         };
         let round_index = self.round_index as usize;
-        let index: usize = stack_sizes[..round_index].iter().sum();
-        let size = stack_sizes[round_index];
-        self.stack[..size].copy_from_slice(&self.deck[index..index + size]);
+        let i: usize = stack_sizes[..round_index].iter().sum();
+        let s = stack_sizes[round_index];
+        self.stack.copy_from(&self.deck, 0..s, i..i + s);
+        println!("{:?}", self.stack);
         self.prepare_new_round();
     }
 
@@ -183,17 +183,13 @@ impl GameInfo {
     }
 
     #[inline]
-    pub fn current_inventory(&self) -> PlayerInventory {
-        self.inventories[self.current_player as usize]
+    pub fn current_inventory(&self) -> &PlayerInventory {
+        &self.inventories[self.current_player as usize]
     }
 
     pub fn buy_card(&mut self, selected_card: u8, current_player: u8, payment_choices: CardChoice) {
-        let idx = selected_card as usize;
-        let card = self.stack[idx];
-        self.stack[idx] = Card::NULL;
-        self.stack[idx..].rotate_left(1);
-
-        self.inventories[current_player as usize].add(card);
+        let card = self.stack.pop(selected_card as usize);
+        self.inventories[current_player as usize].push_back(card);
         self.inventories[current_player as usize]
             .choose_mut(payment_choices)
             .for_each(|card| *card = card.with_leverage(true));

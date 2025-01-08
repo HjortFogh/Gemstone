@@ -1,46 +1,35 @@
-use crate::{
-    game::{Card, CardChoice},
-    CardIterator,
-};
+use std::ops::{Deref, DerefMut};
 
-/// TODO: write docs for entire file
-#[derive(Clone, Copy, Default, Debug)]
-pub struct PlayerInventory {
-    cards: [Card; 21],
-    size: u8,
+use crate::{Card, CardCollection};
+
+#[derive(Clone)]
+pub struct PlayerInventory(CardCollection<21>);
+
+impl AsRef<[Card]> for PlayerInventory {
+    fn as_ref(&self) -> &[Card] {
+        self.0.as_ref()
+    }
 }
 
-impl PlayerInventory {
-    pub fn with_coins() -> Self {
-        let mut default = Self::default();
-        default.add(Card::coin(1));
-        default.add(Card::coin(2));
-        default.add(Card::coin(3));
-        default
-    }
+impl Deref for PlayerInventory {
+    type Target = CardCollection<21>;
 
-    pub fn as_slice(&self) -> &[Card] {
-        &self.cards[0..self.size as usize]
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
-
-    pub fn add(&mut self, card: Card) {
-        self.cards[self.size as usize] = card;
-        self.size += 1;
+}
+impl DerefMut for PlayerInventory {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
+}
 
-    pub fn iter(&self) -> impl CardIterator<Item = &Card> {
-        self.cards.iter()
-    }
-
-    pub fn iter_mut(&mut self) -> impl CardIterator<Item = &mut Card> {
-        self.cards.iter_mut()
-    }
-
-    pub fn choose(&self, choice: CardChoice) -> impl CardIterator<Item = &Card> {
-        self.cards.iter().choose_cards(choice)
-    }
-
-    pub fn choose_mut(&mut self, choice: CardChoice) -> impl CardIterator<Item = &mut Card> {
-        self.cards.iter_mut().choose_cards(choice)
+impl Default for PlayerInventory {
+    fn default() -> Self {
+        let mut inv = PlayerInventory(CardCollection::default());
+        inv.push_back(Card::coin(1));
+        inv.push_back(Card::coin(2));
+        inv.push_back(Card::coin(3));
+        inv
     }
 }

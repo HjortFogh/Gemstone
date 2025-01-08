@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::GemArchtype;
+use super::{CardCollection, GemArchtype};
 
 /// A card represented using a single byte as such: `XX'Y'Z'WWWW`, where `XX`
 /// indicates the value (mapped from range `[0..4)` to `[1..5)`), `Y` indicates
@@ -132,12 +132,12 @@ impl Card {
         gem
     }
 
-    pub fn gem_deck() -> [Card; 18] {
+    pub fn gem_deck() -> CardCollection<18> {
         let mut cards = [Card::default(); 18];
         for i in -2_i32..16 {
             let archtype = GemArchtype::from_index(i.max(0) as u8);
             cards[(i + 2) as usize] = Self::gem(archtype);
         }
-        cards
+        CardCollection::new(cards)
     }
 }

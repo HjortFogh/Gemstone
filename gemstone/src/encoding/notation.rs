@@ -121,19 +121,21 @@ impl GemNotation {
     fn format_inventories(inventories: &[PlayerInventory]) -> String {
         inventories
             .iter()
-            .map(|inv| Self::format_cards(inv.as_slice()))
+            .map(|inv| Self::format_cards(inv))
             .collect::<Vec<String>>()
             .join(";")
     }
 
-    fn format_cards(cards: &[Card]) -> String {
+    fn format_cards(cards: impl AsRef<[Card]>) -> String {
         let lhs = cards
+            .as_ref()
             .iter()
             .cloned()
             .non_leveraged()
             .map(Self::format_card)
             .collect::<String>();
         let rhs = cards
+            .as_ref()
             .iter()
             .cloned()
             .leveraged()
