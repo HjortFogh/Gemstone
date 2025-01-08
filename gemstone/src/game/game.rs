@@ -79,14 +79,16 @@ impl Game {
             if current_inv.choose(payment_choices).leveraged().count() != 0 {
                 return Err(GemError::TriedToUseLeveragedCard);
             }
+
+            println!("player {} won the bidding round with a bid of {}.\nthe capital of this player is {}", current_player, self.info.highest_bid(), current_inv.iter().capital());
+
             if current_inv.choose(payment_choices).capital() < self.info.highest_bid() {
                 return Err(GemError::CannotAffordBid);
             }
 
             self.info
                 .buy_card(selected_card, current_player, payment_choices);
-
-            self.info.prepare_auction();
+            self.info.prepare_new_round();
         }
 
         // check if this is the end of the auction phase

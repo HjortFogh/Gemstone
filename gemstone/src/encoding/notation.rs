@@ -67,7 +67,7 @@
 use std::fmt::Display;
 
 use crate::{
-    game::{Card, CardLike, GameInfo},
+    game::{Card, GameInfo},
     CardIterator, PlayerInventory,
 };
 

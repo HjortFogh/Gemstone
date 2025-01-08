@@ -1,6 +1,6 @@
 use crate::{
     game::{Card, CardChoice},
-    CardIteratorMut, CardIteratorRef,
+    CardIterator,
 };
 
 /// TODO: write docs for entire file
@@ -28,15 +28,19 @@ impl PlayerInventory {
         self.size += 1;
     }
 
-    pub fn iter(&self) -> impl CardIteratorRef<Item = &Card> {
+    pub fn iter(&self) -> impl CardIterator<Item = &Card> {
         self.cards.iter()
     }
 
-    pub fn iter_mut(&mut self) -> impl CardIteratorMut<Item = &mut Card> {
+    pub fn iter_mut(&mut self) -> impl CardIterator<Item = &mut Card> {
         self.cards.iter_mut()
     }
 
-    pub fn choose(&self, choice: CardChoice) -> impl CardIteratorRef<Item = &Card> {
+    pub fn choose(&self, choice: CardChoice) -> impl CardIterator<Item = &Card> {
         self.cards.iter().choose_cards(choice)
+    }
+
+    pub fn choose_mut(&mut self, choice: CardChoice) -> impl CardIterator<Item = &mut Card> {
+        self.cards.iter_mut().choose_cards(choice)
     }
 }

@@ -13,6 +13,6 @@ impl CardChoice {
 impl CardChoice {
     /// Checks if a given card index is part of this `CardChoice`.
     pub fn check(&self, idx: usize) -> bool {
-        self.0 & (1 << idx) == 0
+        self.0 & (1 << idx) != 0
     }
 }

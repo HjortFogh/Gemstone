@@ -2,7 +2,7 @@ use rand::{seq::SliceRandom, thread_rng};
 
 use crate::player::PlayerInventory;
 
-use super::{Card, CardChoice, CardIteratorRef};
+use super::{Card, CardChoice, CardIterator};
 
 /// Represents the final game scores for each of the possible players.
 #[derive(Default, Debug, Clone, Copy)]
@@ -167,7 +167,10 @@ impl GameInfo {
         let index: usize = stack_sizes[..round_index].iter().sum();
         let size = stack_sizes[round_index];
         self.stack[..size].copy_from_slice(&self.deck[index..index + size]);
+        self.prepare_new_round();
+    }
 
+    pub fn prepare_new_round(&mut self) {
         self.starting_player = self.next_clockwise_player(self.highest_bidder);
         self.current_player = self.starting_player;
         self.highest_bid = -1;
@@ -185,9 +188,14 @@ impl GameInfo {
     }
 
     pub fn buy_card(&mut self, selected_card: u8, current_player: u8, payment_choices: CardChoice) {
-        let card = self.stack[selected_card as usize];
+        let idx = selected_card as usize;
+        let card = self.stack[idx];
+        self.stack[idx] = Card::NULL;
+        self.stack[idx..].rotate_left(1);
+
         self.inventories[current_player as usize].add(card);
-        // self.inventories
-        todo!()
+        self.inventories[current_player as usize]
+            .choose_mut(payment_choices)
+            .for_each(|card| *card = card.with_leverage(true));
     }
 }

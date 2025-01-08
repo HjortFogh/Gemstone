@@ -22,9 +22,16 @@ macro_rules! input {
         let _ = write!(stdout, $expl);
         let _ = stdout.flush();
         let _ = stdin.read_line(&mut buf);
-        buf.replace("\r\n", "")
-            .parse::<$parse>()
-            .unwrap_or($default)
+        #[cfg(target_os = "windows")]
+        {
+            buf.replace("\r\n", "")
+                .parse::<$parse>()
+                .unwrap_or($default)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            buf.replace("\n", "").parse::<$parse>().unwrap_or($default)
+        }
     }};
 }
 
