@@ -1,6 +1,7 @@
 use std::{error::Error, fmt::Display, result};
 
 // TODO: make all error names better / revisit
+// TODO: make errors contain useful messages
 
 #[derive(Debug)]
 pub enum GemError {

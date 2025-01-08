@@ -65,6 +65,7 @@ impl Game {
             self.info.increment_player();
         } else {
             let idx = self.info.highest_bidder();
+            self.info.set_current_player(idx);
             let inv = self.info.inventory_at(idx);
             let (mut card_idx, payment_choice) =
                 self.behaviors.borrow_mut()[idx].pick_card(self.info_ref());
@@ -94,7 +95,7 @@ impl Game {
         let idx = self.info.current_player() as usize;
         let choices = self.behaviors.borrow_mut()[idx].reinvest(self.info_ref());
 
-        let current_inv = self.info.current_inventory();
+        let current_inv = self.info.inventory_at(idx);
         if current_inv.choose(choices).scalar_value() < 0 {
             return Err(GemError::CannotAffortToFlip);
         }

@@ -4,7 +4,7 @@
 // pub struct BasicAi;
 
 // impl PlayerBehavior for BasicAi {
-//     fn bid(&mut self, _query: GameQuery) -> i8 {
+//     fn bid(&mut self, _query: GameQuery) -> BidValue {
 //         0
 //     }
 

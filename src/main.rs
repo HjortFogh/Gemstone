@@ -5,8 +5,8 @@ use human_player::HumanBehavior;
 
 fn main() -> Result<()> {
     let mut game_setup = GameSetup::default();
-    game_setup.add_player::<HumanBehavior>()?;
-    game_setup.add_player::<HumanBehavior>()?;
+    game_setup.insert_player(HumanBehavior::new("Alice"))?;
+    game_setup.insert_player(HumanBehavior::new("Charlie"))?;
     game_setup.shuffle_players();
 
     let mut game = game_setup.finish()?;

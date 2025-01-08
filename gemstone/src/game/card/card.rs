@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use crate::BidValue;
+
 use super::{CardCollection, GemArchtype};
 
 /// A card represented using a single byte as such: `XX'Y'Z'WWWW`, where `XX`
@@ -53,11 +55,11 @@ impl Card {
     /// Notice that this function will still return the full value
     /// even if a card has been leveraged.
     #[inline]
-    pub fn value(self) -> i8 {
-        (self.0 >> 6) as i8 + 1
+    pub fn value(self) -> BidValue {
+        (self.0 >> 6) as BidValue + 1
     }
 
-    pub fn get_value(self) -> Option<i8> {
+    pub fn get_value(self) -> Option<BidValue> {
         if self.is_leveraged() {
             None
         } else {
@@ -65,11 +67,11 @@ impl Card {
         }
     }
 
-    pub fn scalar_value(self) -> i8 {
+    pub fn scalar_value(self) -> BidValue {
         self.get_value().unwrap_or(-self.value() + 1)
     }
 
-    pub fn with_value(mut self, value: i8) -> Self {
+    pub fn with_value(mut self, value: BidValue) -> Self {
         self.0 = (self.0 & 0x3f) | (value - 1 << 6) as u8;
         self
     }
@@ -117,7 +119,7 @@ impl Card {
 
 impl Card {
     /// TODO: docs
-    pub fn new(value: i8, is_leveraged: bool, archtype: Option<GemArchtype>) -> Self {
+    pub fn new(value: BidValue, is_leveraged: bool, archtype: Option<GemArchtype>) -> Self {
         Self::default()
             .with_value(value)
             .with_leverage(is_leveraged)
@@ -125,7 +127,7 @@ impl Card {
     }
 
     /// TODO: docs
-    pub fn coin(value: i8) -> Self {
+    pub fn coin(value: BidValue) -> Self {
         Self::default().with_value(value).with_leverage(false)
     }
 

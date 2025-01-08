@@ -1,3 +1,5 @@
+use crate::BidValue;
+
 /// The gem archtype is one of 16 unique gem cards represented as a single byte:
 /// `0'XXX'0'YYY`, where `XXX` and `YYY` represent the first and second gem
 /// respectivly. In the case of the diamond archtype the second gem will also
@@ -52,7 +54,7 @@ impl GemArchtype {
         )
     }
 
-    pub fn value(self) -> i8 {
+    pub fn value(self) -> BidValue {
         match self.get_gems() {
             (GemType::Diamond, _) => 2,
             (g1, g2) if g1 != g2 => 3,

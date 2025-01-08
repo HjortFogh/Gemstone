@@ -2,7 +2,7 @@ use rand::thread_rng;
 
 use crate::{player::PlayerInventory, GemNotation};
 
-use super::{Card, CardChoice, CardCollection, CardIterator};
+use super::{BidValue, Card, CardChoice, CardCollection, CardIterator};
 
 /// Represents the final game scores for each of the possible players.
 #[derive(Default, Debug, Clone, Copy)]
@@ -12,7 +12,7 @@ pub struct GameScores([i32; 4]);
 /// The `GameInfo` holds all variables necessary to represent a unqiue
 /// game-state, but unlike the `Game`-struct this does not have any functions
 /// to autonomously progress the state of the game and is only meant for
-/// querying.
+/// book-keeping.
 #[derive(Clone)]
 pub struct GameInfo {
     /// The total number of players in range `[2..5)`.
@@ -30,15 +30,15 @@ pub struct GameInfo {
     /// Indicates whether this round has ended.
     round_over: bool,
     /// The highest bid made by any player, or `-1` if no bids have been made.
-    highest_bid: i8,
+    highest_bid: BidValue,
     /// Inventories of all the players. If less than four players all non-used
     /// inventories will be filled with [`Card::NULL`].
     inventories: [PlayerInventory; 4],
     /// The current order of all cards in the deck.
     deck: CardCollection<18>,
-    /// The current stack of cards. The game is in the reinvstment phase if all
-    /// cards in the stack are considered [`null`](`Card::NULL`), otherwise the
-    /// game is in the auction phase.
+    /// The current stack of cards. The game is in the reinvestment phase if
+    /// all cards in the stack are considered [`null`](`Card::NULL`), otherwise
+    /// the game is in the auction phase.
     stack: CardCollection<4>,
 }
 
@@ -67,8 +67,8 @@ impl GameInfo {
         }
     }
 
-    pub fn from_notation(_notation: GemNotation) -> Self {
-        todo!()
+    pub fn from_notation(notation: GemNotation) -> Self {
+        notation.to_info()
     }
 }
 
@@ -121,13 +121,13 @@ impl GameInfo {
 
     /// Returns the highest current bid.
     #[inline]
-    pub fn highest_bid(&self) -> i8 {
+    pub fn highest_bid(&self) -> BidValue {
         self.highest_bid
     }
 
     /// TODO: docs
     #[inline]
-    pub fn set_highest_bid(&mut self, bid: i8, idx: usize) {
+    pub fn set_highest_bid(&mut self, bid: BidValue, idx: usize) {
         self.highest_bidder = idx;
         self.highest_bid = bid;
     }
@@ -143,8 +143,14 @@ impl GameInfo {
         &self.inventories[idx]
     }
 
+    #[inline]
     pub fn stack(&self) -> &CardCollection<4> {
         &self.stack
+    }
+
+    #[inline]
+    pub fn stack_size(&self) -> usize {
+        self.stack.len()
     }
 }
 
@@ -160,17 +166,28 @@ impl GameInfo {
         self.highest_bid = -1;
     }
 
-    #[inline]
-    pub fn next_clockwise_player(&self, idx: usize) -> usize {
-        (idx + 1) % self.num_players
-    }
-
     /// Sets the active player index to the next clockwise player.
     pub fn increment_player(&mut self) {
         self.current_player = self.next_clockwise_player(self.current_player);
         if self.current_player == self.starting_player {
             self.round_over = true;
         }
+    }
+
+    pub fn prepare_auction(&mut self) {
+        let stack_sizes = match self.num_players {
+            3 => [3, 3, 3, 3, 3, 3],
+            _ => [4, 3, 3, 3, 3, 2],
+        };
+        let round_index = self.round_index;
+        let idx = stack_sizes[..round_index].iter().sum::<usize>();
+        let size = stack_sizes[round_index];
+        self.stack.copy_from(&self.deck, idx..idx + size, 0..size);
+    }
+
+    #[inline]
+    pub fn next_clockwise_player(&self, idx: usize) -> usize {
+        (idx + 1) % self.num_players
     }
 
     /// Returns whether the game is currently in the auction phase.
@@ -190,51 +207,13 @@ impl GameInfo {
     pub fn game_over(&self) -> bool {
         self.round_index > 5
     }
-
-    pub fn prepare_auction(&mut self) {
-        let stack_sizes = match self.num_players {
-            3 => [3, 3, 3, 3, 3, 3],
-            _ => [4, 3, 3, 3, 3, 2],
-        };
-        let round_index = self.round_index;
-        let idx = stack_sizes[..round_index].iter().sum::<usize>();
-        let size = stack_sizes[round_index];
-        self.stack.copy_from(&self.deck, idx..idx + size, 0..size);
-    }
-
-    pub fn prepare_reinvestment(&mut self) {
-        self.starting_player = self.highest_bidder;
-        self.current_player = self.starting_player;
-    }
 }
 
+//
+// Miscellaneous helper functions
+//
+
 impl GameInfo {
-    /// Calculates the current game scores.
-    pub fn scores(&self) -> GameScores {
-        let mut scores = [0; 4];
-        // one point for each non-leveraged gem
-        for (i, inv) in self.inventories.iter().enumerate() {
-            scores[i] = inv
-                .iter()
-                .non_leveraged()
-                .gem_cards()
-                .map(|card| card.archtype().num_gems() as i32)
-                .sum();
-        }
-
-        // two points for each shared majority
-        // three points for each owned majority
-        // for gem_type in GemType::iter() {
-        //     let mut players = [0; 4];
-        // }
-        GameScores(scores)
-    }
-
-    #[inline]
-    pub fn current_inventory(&self) -> &PlayerInventory {
-        &self.inventories[self.current_player]
-    }
-
     pub fn buy_card(&mut self, card_idx: usize, player_idx: usize, payment_choice: CardChoice) {
         let card = self.stack.pop(card_idx);
         self.inventories[player_idx].push_back(card);
@@ -256,9 +235,44 @@ impl GameInfo {
                 .for_each(|card| *card = card.with_leverage(false))
         });
     }
+}
 
+//
+// Scoring
+//
+
+impl GameInfo {
+    /// Calculates the current game scores.
+    pub fn scores(&self) -> GameScores {
+        let mut scores = [0; 4];
+        // one point for each non-leveraged gem
+        for (i, inv) in self.inventories.iter().enumerate() {
+            scores[i] = inv
+                .iter()
+                .non_leveraged()
+                .gem_cards()
+                .map(|card| card.archtype().num_gems() as i32)
+                .sum();
+        }
+
+        todo!();
+
+        // two points for each shared majority
+        // three points for each owned majority
+        // for gem_type in GemType::iter() {
+        //     let mut players = [0; 4];
+        // }
+        GameScores(scores)
+    }
+}
+
+//
+// Behavior interface
+//
+
+impl GameInfo {
     #[inline]
-    pub fn stack_size(&self) -> usize {
-        self.stack.len()
+    pub fn my_inventory(&self) -> &PlayerInventory {
+        &self.inventories[self.current_player]
     }
 }

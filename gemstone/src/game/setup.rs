@@ -17,10 +17,15 @@ impl GameSetup {
     /// Adds a [`PlayerBehavior`] to the game. This function will return an
     /// error if the current number of players already equal or exceed four.
     pub fn add_player<T: PlayerBehavior + Default + 'static>(&mut self) -> Result<()> {
+        self.insert_player(T::default())?;
+        Ok(())
+    }
+
+    pub fn insert_player(&mut self, player: impl PlayerBehavior + 'static) -> Result<()> {
         if self.behaviors.len() >= 4 {
             return Err(GemError::ReachedPlayerLimit);
         }
-        self.behaviors.push(Box::new(T::default()));
+        self.behaviors.push(Box::new(player));
         Ok(())
     }
 

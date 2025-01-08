@@ -1,3 +1,5 @@
+use crate::BidValue;
+
 use super::{Card, CardChoice};
 
 pub trait CardIterator
@@ -31,11 +33,11 @@ where
         self.filter(|card| !card.as_ref().is_null())
     }
 
-    fn capital(self) -> i8 {
+    fn capital(self) -> BidValue {
         self.flat_map(|card| card.as_ref().get_value()).sum()
     }
 
-    fn scalar_value(self) -> i8 {
+    fn scalar_value(self) -> BidValue {
         self.map(|card| card.as_ref().scalar_value()).sum()
     }
 }

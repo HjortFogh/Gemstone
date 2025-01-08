@@ -46,46 +46,78 @@ macro_rules! input {
 }
 
 #[derive(Debug, Default)]
-pub struct HumanBehavior;
+pub struct HumanBehavior {
+    name: String,
+}
 
-/* impl PlayerBehavior for HumanBehavior {
-    fn bid(&mut self, info: &GameInfo) -> i8 {
-        println!("\n\n");
-        println!("{}", GemNotation::from_info(info));
-        input!("make a bid: " => i8, 0)
+impl HumanBehavior {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+        }
+    }
+
+    fn format_cards(cards: impl AsRef<[Card]>) -> String {
+        cards
+            .as_ref()
+            .iter()
+            .enumerate()
+            .map(|(i, &card)| {
+                format!(
+                    "{i}=>{}{}",
+                    if card.is_leveraged() { "!" } else { "" },
+                    GemNotation::format_card(card)
+                )
+            })
+            .collect::<Vec<String>>()
+            .join(", ")
+    }
+}
+
+impl PlayerBehavior for HumanBehavior {
+    fn bid(&mut self, info: &GameInfo) -> BidValue {
+        println!("\n{} ====================", self.name);
+        println!("{}\n", GemNotation::from_info(info));
+
+        println!(
+            "Make a bid. The current highest bid is {}.",
+            info.highest_bid()
+        );
+        println!("Your capital is {}.", info.my_inventory().iter().capital());
+
+        input!("Enter your bid: " => BidValue, 0)
     }
 
     fn pick_card(&mut self, info: &GameInfo) -> (usize, CardChoice) {
-        println!("\n\n");
-        println!("pick card");
-        println!("stack: {:?}", info.stack());
-        let card = input!("select card to buy: " => usize, 0);
-        println!("inventory: {:?}", info.current_inventory());
-        let choice_indices = input!("select payment cards: " => [usize], []);
+        println!("\n{} ====================", self.name);
+        println!("{}\n", GemNotation::from_info(info));
+
+        println!(
+            "Select a card. Available cards are: {}",
+            Self::format_cards(info.stack())
+        );
+        let card = input!("Enter card: " => usize, 0);
+
+        println!(
+            "Select payment cards (you bid {}). Your inventory is: {}",
+            info.highest_bid(),
+            Self::format_cards(info.my_inventory())
+        );
+        let choice_indices = input!("Enter card choices: " => [usize], []);
+
         (card, CardChoice::new(&choice_indices))
     }
 
     fn reinvest(&mut self, info: &GameInfo) -> CardChoice {
-        println!("\n\n");
-        println!("inventory: {:?}", info.current_inventory());
-        let choice_indices = input!("select cards to flip: " => [usize], []);
+        println!("\n{} ====================", self.name);
+        println!("{}\n", GemNotation::from_info(info));
+
+        println!(
+            "Select cards to flip. Your inventory is: {}",
+            Self::format_cards(info.my_inventory())
+        );
+
+        let choice_indices = input!("Enter cards: " => [usize], []);
         CardChoice::new(&choice_indices)
-    }
-} */
-
-impl PlayerBehavior for HumanBehavior {
-    fn bid(&mut self, _info: &GameInfo) -> i8 {
-        println!("bid");
-        0
-    }
-
-    fn pick_card(&mut self, _info: &GameInfo) -> (usize, CardChoice) {
-        println!("pick_card");
-        (0, CardChoice::NONE)
-    }
-
-    fn reinvest(&mut self, _info: &GameInfo) -> CardChoice {
-        println!("reinvest");
-        CardChoice::NONE
     }
 }

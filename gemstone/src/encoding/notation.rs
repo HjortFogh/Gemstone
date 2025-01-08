@@ -68,8 +68,10 @@ use std::fmt::Display;
 
 use crate::{
     game::{Card, GameInfo},
-    CardIterator, PlayerInventory,
+    BidValue, CardIterator, PlayerInventory,
 };
+
+// TODO: (c)urrent-, (f)irst-, (h)ighest-markers
 
 /// TODO: docs
 pub struct GemNotation(String);
@@ -86,8 +88,8 @@ impl GemNotation {
         Self(Self::format(info))
     }
 
-    pub fn to_info(&self) -> GameInfo {
-        todo!()
+    pub fn to_info(self) -> GameInfo {
+        todo!();
     }
 
     /// TODO: docs
@@ -101,7 +103,7 @@ const ARCHTYPE_CODES: [&str; 16] = [
 ];
 
 impl GemNotation {
-    fn format(info: &GameInfo) -> String {
+    pub fn format(info: &GameInfo) -> String {
         format!(
             "{}/{}/{}",
             Self::format_highest_bid(info.highest_bid()),
@@ -110,7 +112,7 @@ impl GemNotation {
         )
     }
 
-    fn format_highest_bid(bid: i8) -> String {
+    pub fn format_highest_bid(bid: BidValue) -> String {
         if bid < 0 {
             '-'.to_string()
         } else {
@@ -118,7 +120,7 @@ impl GemNotation {
         }
     }
 
-    fn format_inventories(inventories: &[PlayerInventory]) -> String {
+    pub fn format_inventories(inventories: &[PlayerInventory]) -> String {
         inventories
             .iter()
             .map(|inv| Self::format_cards(inv))
@@ -126,7 +128,7 @@ impl GemNotation {
             .join(";")
     }
 
-    fn format_cards(cards: impl AsRef<[Card]>) -> String {
+    pub fn format_cards(cards: impl AsRef<[Card]>) -> String {
         let lhs = cards
             .as_ref()
             .iter()
@@ -147,7 +149,7 @@ impl GemNotation {
         }
     }
 
-    fn format_card(card: Card) -> String {
+    pub fn format_card(card: Card) -> String {
         if card.is_coin() {
             card.value().to_string()
         } else {

@@ -1,3 +1,5 @@
+// TODO: make usable for selections higher than 32
+
 /// Represents a choice of cards given a specific collection of `Card`-structs.
 /// Note that a `CardChoice` is meaningless without a corresponding collection.
 #[derive(Clone, Copy, Debug)]
