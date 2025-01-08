@@ -1,5 +1,7 @@
 use std::{error::Error, fmt::Display, result};
 
+// TODO: make all error names better / revisit
+
 #[derive(Debug)]
 pub enum GemError {
     /// Raised when number of players exceed four

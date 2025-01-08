@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::{Card, CardCollection};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PlayerInventory(CardCollection<21>);
 
 impl AsRef<[Card]> for PlayerInventory {

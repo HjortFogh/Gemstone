@@ -19,12 +19,24 @@ where
         self.filter(|card| !card.as_ref().is_leveraged())
     }
 
+    fn coin_cards(self) -> impl CardIterator<Item = Self::Item> {
+        self.filter(|card| card.as_ref().is_coin())
+    }
+
+    fn gem_cards(self) -> impl CardIterator<Item = Self::Item> {
+        self.filter(|card| !card.as_ref().is_coin())
+    }
+
     fn non_null(self) -> impl CardIterator<Item = Self::Item> {
         self.filter(|card| !card.as_ref().is_null())
     }
 
     fn capital(self) -> i8 {
         self.flat_map(|card| card.as_ref().get_value()).sum()
+    }
+
+    fn scalar_value(self) -> i8 {
+        self.map(|card| card.as_ref().scalar_value()).sum()
     }
 }
 

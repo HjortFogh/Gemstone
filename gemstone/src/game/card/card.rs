@@ -65,6 +65,10 @@ impl Card {
         }
     }
 
+    pub fn scalar_value(self) -> i8 {
+        self.get_value().unwrap_or(-self.value() + 1)
+    }
+
     pub fn with_value(mut self, value: i8) -> Self {
         self.0 = (self.0 & 0x3f) | (value - 1 << 6) as u8;
         self
@@ -89,8 +93,8 @@ impl Card {
         self.0 & 0x20 != 0
     }
 
-    /// Returns the card [`GemArchtype`]. Notice that this is only valid if
-    /// this card is not a coin card.
+    /// Returns the card [`GemArchtype`]. Note that this is only valid if this
+    /// card is not a coin card.
     #[inline]
     pub fn archtype(self) -> GemArchtype {
         GemArchtype::from_index(self.0 & 0x0f)

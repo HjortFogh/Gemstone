@@ -67,7 +67,7 @@ impl Game {
         self.info.next_player();
 
         // check if this is the end of a round
-        // on average any auction phase will have an average of three rounds
+        // any auction phase will have an average of three rounds
         if self.info.is_end_of_round() {
             self.info.set_current_player(self.info.highest_bidder());
             let current_player = self.info.current_player();
@@ -94,14 +94,36 @@ impl Game {
         // check if this is the end of the auction phase
         if self.info.is_reinvestment_phase() {
             // set the starting reinvester to the last buyer
+            self.info.prepare_reinvestment();
         }
 
         Ok(())
     }
 
     // TODO: implement
-    fn step_reinvestment(&self) -> Result<()> {
-        todo!()
+    fn step_reinvestment(&mut self) -> Result<()> {
+        let current_player = self.info.current_player() as usize;
+        let current_inv = self.info.current_inventory();
+
+        let choices = self.behaviors.borrow_mut()[current_player].reinvest(self.info_ref());
+
+        if current_inv.choose(choices).scalar_value() < 0 {
+            return Err(GemError::CannotAffortToFlip);
+        }
+        self.info.flip_cards(current_player, choices);
+
+        self.info.next_player();
+
+        // reinvestment phase only has one round
+        if self.info.is_end_of_round() {
+            self.info.reset_coin_cards();
+            self.info.next_round();
+            if !self.info.is_game_over() {
+                self.info.prepare_auction();
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns a reference to the [`GameInfo`].

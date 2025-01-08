@@ -40,12 +40,6 @@ impl<const N: usize> CardCollection<N> {
 
         while start < end {
             let mid = start + ((end - start) >> 1);
-
-            println!(
-                "s: {}, e: {} (m: {}) === item: {:?}",
-                start, end, mid, cards[mid]
-            );
-
             if cards[mid].is_null() {
                 if !cards[mid - 1].is_null() {
                     return mid;
@@ -91,23 +85,22 @@ impl<const N: usize> CardCollection<N> {
     }
 
     pub fn iter(&self) -> impl CardIterator<Item = &Card> {
-        self.cards.iter()
+        self.cards[..self.len].iter()
     }
 
     pub fn iter_mut(&mut self) -> impl CardIterator<Item = &mut Card> {
-        self.cards.iter_mut()
+        self.cards[..self.len].iter_mut()
     }
 
     pub fn choose(&self, choice: CardChoice) -> impl CardIterator<Item = &Card> {
-        self.cards.iter().choose_cards(choice)
+        self.cards[..self.len].iter().choose_cards(choice)
     }
 
     pub fn choose_mut(&mut self, choice: CardChoice) -> impl CardIterator<Item = &mut Card> {
-        self.cards.iter_mut().choose_cards(choice)
+        self.cards[..self.len].iter_mut().choose_cards(choice)
     }
 
     pub fn shuffle(&mut self, rng: &mut impl Rng) {
-        println!("len: {}", self.len);
         self.cards[..self.len].shuffle(rng);
     }
 }

@@ -84,4 +84,8 @@ impl GemType {
             _ => unreachable!(),
         }
     }
+
+    pub fn iter() -> impl Iterator<Item = GemType> {
+        (0..6).map(|i| Self::from_index(i))
+    }
 }

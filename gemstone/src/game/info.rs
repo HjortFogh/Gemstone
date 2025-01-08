@@ -2,7 +2,9 @@ use rand::thread_rng;
 
 use crate::player::PlayerInventory;
 
-use super::{Card, CardChoice, CardCollection};
+use super::{Card, CardChoice, CardCollection, CardIterator, GemType};
+
+// TODO: figure out whether to use u8/usize, i8/i32/custom bid struct
 
 /// Represents the final game scores for each of the possible players.
 #[derive(Default, Debug, Clone, Copy)]
@@ -165,8 +167,7 @@ impl GameInfo {
         let round_index = self.round_index as usize;
         let i: usize = stack_sizes[..round_index].iter().sum();
         let s = stack_sizes[round_index];
-        self.stack.copy_from(&self.deck, 0..s, i..i + s);
-        println!("{:?}", self.stack);
+        self.stack.copy_from(&self.deck, i..i + s, 0..s);
         self.prepare_new_round();
     }
 
@@ -176,10 +177,30 @@ impl GameInfo {
         self.highest_bid = -1;
     }
 
+    pub fn prepare_reinvestment(&mut self) {
+        self.starting_player = self.highest_bidder;
+        self.current_player = self.starting_player;
+    }
+
     /// Calculates the current game scores.
     pub fn scores(&self) -> GameScores {
-        // TODO: calculate the scores
-        GameScores([0; 4])
+        let mut scores = [0; 4];
+        // one point for each non-leveraged gem
+        for (i, inv) in self.inventories.iter().enumerate() {
+            scores[i] = inv
+                .iter()
+                .non_leveraged()
+                .gem_cards()
+                .map(|card| card.archtype().num_gems() as i32)
+                .sum();
+        }
+
+        // two points for each shared majority
+        // three points for each owned majority
+        // for gem_type in GemType::iter() {
+        //     let mut players = [0; 4];
+        // }
+        GameScores(scores)
     }
 
     #[inline]
@@ -193,5 +214,23 @@ impl GameInfo {
         self.inventories[current_player as usize]
             .choose_mut(payment_choices)
             .for_each(|card| *card = card.with_leverage(true));
+    }
+
+    pub fn flip_cards(&mut self, player: usize, choices: CardChoice) {
+        self.inventories[player]
+            .choose_mut(choices)
+            .for_each(|card| *card = card.with_leverage(!card.is_leveraged()));
+    }
+
+    pub fn reset_coin_cards(&mut self) {
+        self.inventories.iter_mut().for_each(|inv| {
+            inv.iter_mut()
+                .coin_cards()
+                .for_each(|card| *card = card.with_leverage(false))
+        });
+    }
+
+    pub fn next_round(&mut self) {
+        self.round_index += 1;
     }
 }
